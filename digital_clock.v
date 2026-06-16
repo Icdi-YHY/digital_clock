@@ -67,23 +67,20 @@ always @(posedge clk or posedge rst) begin
         am_h <= 4'd0; am_l <= 4'd0;
         alm <= 1'b0;
     end else begin
-        // 1. 闹钟触发判断 (必须严格卡在 00 秒触发，防止关闭后在同一分钟内反复诈尸)
+        // 1. 闹钟/整点触发判断（只在进入00秒时触发一次）
         if ((key_mode == S_NORMAL) && 
-            ({h_h, h_l, m_h, m_l} == {ah_h, ah_l, am_h, am_l}) && 
             (s_h == 4'd0 && s_l == 4'd0) && (!alm)) begin
-            
+    
+        // 闹钟条件 OR 整点条件（分钟为00）
+        if (({h_h, h_l, m_h, m_l} == {ah_h, ah_l, am_h, am_l}) ||
+            ({m_h, m_l} == 8'h00)) begin
             alm <= 1'b1; 
         end
-        // 2. 闹钟消除逻辑
+        end
+        // 2. 报时消除逻辑（响一个周期后自动关闭）
         else if (alm) begin
-            // 响满 30 秒自动关闭
-            if (s_h == 4'd3 && s_l == 4'd0) begin
-                alm <= 1'b0;
-            end
-            // 手动关闭闹钟
-            else if (ke && (key_mode == S_NORMAL)) begin
-                alm <= 1'b0;
-            end
+        // 只响一下：下一个时钟周期立即关闭
+            alm <= 1'b0;
         end
         // 2. 按键调整逻辑
         if(ke) begin
